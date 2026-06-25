@@ -12,6 +12,22 @@ import json
 
 mcp = FastMCP("MQTT Bridge", instructions="Bridge MQTT / IoT messaging to ONE OS — parse, map, govern device security (IEC 62443 / NIS2).")
 
+# ── SIGIL: every governed action → one signed hash-chained hop (SIGIL_LOG unifies all layers) ──
+import hashlib as _hl, time as _t, json as _j, os as _os
+_SIGIL_LOG = _os.environ.get("SIGIL_LOG", _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "bridge_sigil.log"))
+def _sigil(op, body):
+    try:
+        prev = ""
+        if _os.path.exists(_SIGIL_LOG):
+            with open(_SIGIL_LOG) as f:
+                ls = f.readlines()
+                if ls: prev = _j.loads(ls[-1]).get("digest", "")
+        ts = int(_t.time()); dg = _hl.sha256(f"{op}|{ts}|{prev[:8]}|{body}".encode()).hexdigest()[:16]
+        _os.makedirs(_os.path.dirname(_SIGIL_LOG), exist_ok=True)
+        with open(_SIGIL_LOG, "a") as f: f.write(_j.dumps({"ts": ts, "op": op, "body": body, "prev_digest": prev, "digest": dg}) + "\n")
+        return dg
+    except Exception: return ""
+
 
 class MQTTParsed(BaseModel):
     topic: Optional[str] = None
@@ -60,6 +76,7 @@ def map_to_modern(topic: str, payload: str = "", qos: int = 0, retain: bool = Fa
 @mcp.tool()
 def govern_iot(topic: str, payload: str = "", qos: int = 0, retain: bool = False, tls: bool = False, authenticated: bool = False) -> Governance:
     """Governance: IoT/OT device security surface — auth, TLS, command authorisation (attestable)."""
+    _sigil("G", "mqtt|govern_iot")
     m = parse_mqtt(topic, payload, qos, retain)
     flags = []
     if not tls:
