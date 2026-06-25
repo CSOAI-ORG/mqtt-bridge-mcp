@@ -1,0 +1,8 @@
+# mqtt-bridge-mcp
+# CSOAI Layer-0 legacy-bridge. Bridge MQTT / IoT messaging to ONE OS — parse, map, govern device security (IEC 62443 / NIS2).
+
+## Install
+```bash
+pip install -e .
+python server.py
+```
