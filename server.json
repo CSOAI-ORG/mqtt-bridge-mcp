@@ -1,7 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
   "name": "io.github.CSOAI-ORG/mqtt-bridge-mcp",
-  "description": "Bridge MQTT / IoT messaging to ONE OS — parse, map, govern device security (IEC 62443 / NIS2).",
+  "description": "Bridge MQTT / IoT messaging to ONE OS \u2014 parse, map, govern device security (IEC 62443 / NIS2).",
   "version": "0.1.0",
-  "packages": [{"registry_type": "pypi", "identifier": "mqtt-bridge-mcp", "version": "0.1.0", "transport": {"type": "stdio"}}]
+  "packages": [
+    {
+      "identifier": "mqtt-bridge-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "registryType": "pypi",
+      "runtimeHint": "python"
+    }
+  ]
 }
