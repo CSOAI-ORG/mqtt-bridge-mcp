@@ -5,7 +5,7 @@ Parse MQTT publish packets/topics, map to modern telemetry, govern IoT/OT securi
 Sibling of cobol-bridge-mcp; pairs with scada-bridge-mcp. Pairs with NIS2 / IEC 62443.
 Tools: parse_mqtt · map_to_modern · govern_iot
 """
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer as FastMCP  # mcp 2.x: FastMCP renamed MCPServer
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import json
@@ -90,6 +90,37 @@ def govern_iot(topic: str, payload: str = "", qos: int = 0, retain: bool = False
     return Governance(risk_flags=flags,
                       frameworks=["IEC 62443 (IIoT)", "NIS2", "ETSI EN 303 645 (consumer IoT)", "NIST IoT (8259)"],
                       note="CSOAI governs the bridge: every device command attestable on the ledger.")
+
+
+# ---------------------------------------------------------------------------
+# MCP 2026-07-28 wire - header-add migration (2026-10-08)
+# ---------------------------------------------------------------------------
+# stdio carries no HTTP headers, so Mcp-Method / Mcp-Name are not applicable to
+# this transport at runtime. When mqtt-bridge-mcp is exposed over HTTP, route the ingress
+# through the vendored mcp2026_shim (ShimASGI): it validates Mcp-Method /
+# Mcp-Name, injects params._meta.protocolVersion = "2026-07-28" into every
+# request, strips Mcp-Session-Id and answers legacy initialize / server-discover
+# locally (the session header is never emitted - stateless wire).
+# Refs: MIGRATION_NOTE.md, MCP_2026_WIRE_MIGRATION_PLAN_2026-10-07.md (3) + (4).
+# ---------------------------------------------------------------------------
+
+
+def http_app():
+    """ASGI app for HTTP exposure, wrapped in the 2026-07-28 wire shim.
+
+    stdio (``mcp.run()``) needs no shim; this is the enable path once the
+    server is fronted by an HTTP transport. Bodies are buffered, so responses
+    are requested in JSON mode rather than SSE.
+    """
+    from mcp2026_shim import WIRE_2026, ShimASGI, ShimConfig
+
+    return ShimASGI(
+        mcp.streamable_http_app(json_response=True),
+        ShimConfig(
+            protocol_version=WIRE_2026,
+            server_info={"name": "mqtt-bridge-mcp", "version": "0.1.0"},
+        ),
+    )
 
 
 def main():
